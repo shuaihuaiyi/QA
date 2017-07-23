@@ -27,7 +27,7 @@ def readEmbeddingFile(filename, embeddingSize):
     """
     word2idx = dict()
     with open(filename, mode="r", encoding="utf-8") as rf:
-        for line in rf.readlines():
+        for line in rf:
             arr = line.split(" ")
             if len(arr) != (embeddingSize + 2):
                 print("词向量维度定义有误")
