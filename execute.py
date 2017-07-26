@@ -5,29 +5,29 @@ import datetime
 import time
 import tensorflow as tf
 
-import evaluation
+import taevaluation
 
-from data_helper import loadData, load_embedding, batch_iter
+from data_helper import loadData, load_embedding, batch_iter, valid_iter
 from polymerization import LstmQa
 
 # ------------------------- define parameter -----------------------------
-tf.flags.DEFINE_string("train_file", "data/develop.data", "train corpus file")
+tf.flags.DEFINE_string("train_file", "data/training.data", "train corpus file")
 tf.flags.DEFINE_string("test_file", "data/develop.data", "test corpus file")
 tf.flags.DEFINE_string("valid_file", "data/develop.data", "test corpus file")
 tf.flags.DEFINE_string("result_file", "result.txt", "result file")
 tf.flags.DEFINE_string("embedding_file", "word2vec\zhwiki_2017_03.sg_50d.word2vec", "embedding file")
 tf.flags.DEFINE_integer("embedding_size", 50, "embedding size")
 tf.flags.DEFINE_float("dropout", 1, "the proportion of dropout")
-tf.flags.DEFINE_float("lr", 0.1, "the proportion of dropout")
-tf.flags.DEFINE_integer("batch_size", 10, "batch size of each batch")
-tf.flags.DEFINE_integer("epochs", 1, "epochs")
-tf.flags.DEFINE_integer("rnn_size", 50, "embedding size")
+tf.flags.DEFINE_float("lr", 0.1, "learning rate")
+tf.flags.DEFINE_integer("batch_size", 20, "batch size of each batch")
+tf.flags.DEFINE_integer("epochs", 500, "epochs")
+tf.flags.DEFINE_integer("rnn_size", 100, "rnn size")
 tf.flags.DEFINE_integer("num_rnn_layers", 1, "embedding size")
-tf.flags.DEFINE_integer("num_unroll_steps", 5, "句子中的最大词汇数目") # todo 改掉！！！
+tf.flags.DEFINE_integer("num_unroll_steps", 100, "句子中的最大词汇数目")
 tf.flags.DEFINE_integer("max_grad_norm", 5, "embedding size")
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
-tf.flags.DEFINE_boolean("log_device_placement", True, "Log placement of ops on devices")
+tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
 tf.flags.DEFINE_float("gpu_options", 0.75, "use memory rate")
 
 FLAGS = tf.flags.FLAGS
@@ -50,10 +50,12 @@ logger.addHandler(fh)
 
 # ------------------------------------load data -------------------------------
 embedding, word2idx, idx2word = load_embedding(FLAGS.embedding_file, FLAGS.embedding_size)
-train_questions, train_answers, train_labels, train_questionId = loadData(FLAGS.train_file, word2idx,FLAGS.num_unroll_steps)
+train_questions, train_answers, train_labels, train_questionId = loadData(FLAGS.train_file, word2idx,
+                                                                          FLAGS.num_unroll_steps)
 
 test_questions, test_answers, test_labels, test_questionId = loadData(FLAGS.test_file, word2idx, FLAGS.num_unroll_steps)
-valid_questions, valid_answers, valid_labels, valid_questionId = loadData(FLAGS.valid_file, word2idx,FLAGS.num_unroll_steps)
+valid_questions, valid_answers, valid_labels, valid_questionId = loadData(FLAGS.valid_file, word2idx,
+                                                                          FLAGS.num_unroll_steps)
 
 
 def run_step(sess, ori_batch, cand_batch, neg_batch, lstm, dropout=1.):
@@ -94,23 +96,18 @@ def valid_run_step(sess, ori_batch, cand_batch, lstm, dropout=1.):
     return ori_cand_score
 
 
-# ---------------------------------- execute train model end --------------------------------------
-
-# ---------------------------------- execute valid model ------------------------------------------
 def valid_model(sess, lstm, valid_questions, valid_answers, valid_file, result_file):
     # 输出文件
     with open(result_file, 'w') as file:
-        for ori_train, cand_train, neg_train in batch_iter(train_questions, train_answers,train_labels, train_questionId, FLAGS.batch_size):
-            scores = valid_run_step(sess, ori_train, ori_train, lstm)
+        for questions, answers in valid_iter(valid_questions, valid_answers, FLAGS.batch_size):
+            scores = valid_run_step(sess, questions, answers, lstm)
             for score in scores:
-                file.write(str(score) + '\n')
+                file.write("%.9f" % score + '\n')
     # 评估MRR
-    print("MRR = " + str(evaluation.getMRR(valid_file, result_file)))
+    file.close()
+    taevaluation.evaluate(valid_file, result_file)
 
 
-# ---------------------------------- execute valid model end --------------------------------------
-
-# ----------------------------------- begin to train -----------------------------------
 with tf.Graph().as_default():
     with tf.device("/gpu:0"):
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_options)
@@ -135,6 +132,6 @@ with tf.Graph().as_default():
                 for ori_train, cand_train, neg_train in batch_iter(train_questions, train_answers,
                                                                    train_labels, train_questionId, FLAGS.batch_size):
                     run_step(sess, ori_train, cand_train, neg_train, lstm)
-                valid_model(sess, lstm, valid_questions, valid_answers,FLAGS.valid_file,FLAGS.result_file)
-            valid_model(sess, lstm, test_questions, test_answers, FLAGS.test_file,FLAGS.result_file)
+                valid_model(sess, lstm, valid_questions, valid_answers, FLAGS.valid_file, FLAGS.result_file)
+            valid_model(sess, lstm, test_questions, test_answers, FLAGS.test_file, FLAGS.result_file)
             # ---------------------------------- end train -----------------------------------

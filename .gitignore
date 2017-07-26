@@ -138,3 +138,5 @@ ENV/
 
 # Rope project settings
 .ropeproject
+/result.txt
+/evaluation.txt

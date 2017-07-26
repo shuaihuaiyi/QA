@@ -2,6 +2,7 @@
 
 import codecs
 import logging
+import re
 from collections import defaultdict
 
 import jieba
@@ -47,13 +48,20 @@ def sent_to_idx(sent, word2idx, sequence_len):
     convert sentence to index array
     """
     unknown_id = word2idx.get("UNKNOWN", 0)
-    sent2idx = [unknown_id]*sequence_len
-    i=0
+    num_id = word2idx.get("NUM",len(word2idx))
+    sent2idx = [unknown_id] * sequence_len
+    i = 0
     for word in jieba.cut(sent):
-        sent2idx[i] = word2idx.get(word, unknown_id)
-        if i >= sequence_len-1:
+        if(word in word2idx):
+            sent2idx[i] = word2idx[word]
+        else:
+            if re.match("\d+",word):
+                sent2idx[i] = num_id
+            else:
+                sent2idx[i] = unknown_id
+        if i >= sequence_len - 1:
             break
-        i+=1
+        i += 1
     return sent2idx
 
 
@@ -97,12 +105,12 @@ def batch_iter(questions, answers, labels, questionIds, batch_size):
     """
     trueAnswer = ""
     data_len = questionIds[-1]
-    batch_num = int(data_len / batch_size)
+    batch_num = int(data_len / batch_size) + 1
     line = 0
     for batch in range(batch_num):
         # 对于每一批问题
         resultQuestions, trueAnswers, falseAnswers = [], [], []
-        for questionId in range(batch * batch_size, (batch + 1) * batch_size):
+        for questionId in range(batch * batch_size, min((batch + 1) * batch_size, data_len)):
             # 对于每一个问题
             trueCount = 0
             while questionIds[line] == questionId:
@@ -112,7 +120,18 @@ def batch_iter(questions, answers, labels, questionIds, batch_size):
                     falseAnswers.append(answers[line])
                 else:
                     trueAnswer = answers[line]
-                    trueCount+=1
+                    trueCount += 1
                 line += 1
             trueAnswers.extend([trueAnswer] * (questionIds.count(questionId) - trueCount))
         yield np.array(resultQuestions), np.array(trueAnswers), np.array(falseAnswers)
+
+
+def valid_iter(questions, answers, batch_size):
+    lines = len(questions)
+    data_len = batch_size * 20
+    batch_num = int(lines / data_len) + 1
+    questions, answers = np.array(questions), np.array(answers)
+    for batch in range(batch_num):
+        startIndex = batch * data_len
+        endIndex = min(batch * data_len + data_len, lines)
+        yield questions[startIndex:endIndex], answers[startIndex:endIndex]

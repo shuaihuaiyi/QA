@@ -40,8 +40,12 @@ def getMRR(testFile, resultFile):
             sumq+=1.0
             for j in range(len(questionMap)):
                 if questionMap[j][1] == 1.0:
-                    correct+=1/j
+                    correct+=1/(j+1)
                     break
             questionMap.clear()
         questionMap.append([resultSet[i],line[2]])
+    sumq += 1.0
+    for j in range(len(questionMap)):
+        if questionMap[j][1] == 1.0:
+            correct += 1 / (j + 1)
     return correct/sumq
