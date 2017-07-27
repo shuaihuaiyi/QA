@@ -65,7 +65,7 @@ def sent_to_idx(sent, word2idx, sequence_len):
     return sent2idx
 
 
-def loadData(filename, word2idx, sequence_len):
+def loadData(filename, word2idx, maxLen, training = False):
     """
     load data
     """
@@ -76,19 +76,17 @@ def loadData(filename, word2idx, sequence_len):
         try:
             for line in rf.readlines():
                 arr = line.strip().split("\t")
-                if len(arr) != 3:
-                    logging.error("invalid data:%s" % line)
-                    continue
                 if question != arr[0]:
                     question = arr[0]
                     questionId += 1
-                ori_quest = sent_to_idx(arr[0], word2idx, sequence_len)
-                cand_quest = sent_to_idx(arr[1], word2idx, sequence_len)
-                label = int(arr[2])
+                ori_quest = sent_to_idx(arr[0], word2idx, maxLen)
+                cand_quest = sent_to_idx(arr[1], word2idx, maxLen)
+                if training:
+                    label = int(arr[2])
+                    labels.append(label)
 
                 ori_quests.append(ori_quest)
                 cand_quests.append(cand_quest)
-                labels.append(label)
                 questionIds.append(questionId)
 
         except Exception as e:

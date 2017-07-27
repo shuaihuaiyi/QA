@@ -62,6 +62,8 @@ class LstmQa(object):
         self.ori_cand = feature2cos_sim(ori_q_feat, cand_q_feat)
         self.ori_neg = feature2cos_sim(ori_q_feat, neg_q_feat)
         self.loss, self.acc = cal_loss_and_acc(self.ori_cand, self.ori_neg)
+        tf.scalar_summary('loss', loss)
+
 
         self.test_q_a = feature2cos_sim(test_q_out, test_a_out)
 
