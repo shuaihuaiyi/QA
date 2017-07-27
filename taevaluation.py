@@ -84,13 +84,13 @@ class Evaluator(object):
     def ACC_at_1(self):
         return float(sum(self.ACC_at1List))/len(self.ACC_at1List)
 
-def evaluate(QApairFile, scoreFile, outputFile = 'evaluation.txt'):
+def evaluate(QApairFile, scoreFile, outputFile = 'evaluation.score'):
     testor= Evaluator(QApairFile, scoreFile)
     testor.calculate()
     print("MRR:%f \t MAP:%f \t ACC@1:%f\n" % (testor.MRR(), testor.MAP(), testor.ACC_at_1()))
     if outputFile!='':
         fw=open(outputFile,'a')
-        fw.write('MRR:%f \t MAP:%f \t ACC@1:%f\n' %(testor.MRR(),testor.MAP(),testor.ACC_at_1()))
+        fw.write('%f \t %f \t %f\n' %(testor.MRR(),testor.MAP(),testor.ACC_at_1()))
 
 if __name__=='__main__':
 #     QApairFile='testing.data'
