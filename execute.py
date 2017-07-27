@@ -19,8 +19,8 @@ tf.flags.DEFINE_integer("embedding_size", 50, "embedding size")
 tf.flags.DEFINE_float("dropout", 1, "the proportion of dropout")
 learningRate = 0.5
 tf.flags.DEFINE_integer("batch_size", 20, "batch size of each batch")
-tf.flags.DEFINE_integer("epochs", 20, "epochs")
-tf.flags.DEFINE_integer("rnn_size", 100, "rnn size")
+tf.flags.DEFINE_integer("epochs", 10, "epochs")
+tf.flags.DEFINE_integer("rnn_size", 200, "rnn size")
 tf.flags.DEFINE_integer("num_rnn_layers", 1, "embedding size")
 tf.flags.DEFINE_integer("num_unroll_steps", 100, "句子中的最大词汇数目")
 tf.flags.DEFINE_integer("max_grad_norm", 5, "max grad norm")
@@ -91,18 +91,19 @@ def valid_model(sess, lstm, valid_questions, valid_answers, valid_file, result_f
         taevaluation.evaluate(valid_file, result_file)
 
 
+
 with tf.Graph().as_default():
     with tf.device("/gpu:0"):
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_options)
         session_conf = tf.ConfigProto(allow_soft_placement=FLAGS.allow_soft_placement,
                                       gpu_options=gpu_options)
         with tf.Session(config=session_conf).as_default() as sess:
+
             lstm = LstmQa(FLAGS.batch_size, FLAGS.num_unroll_steps, embedding, FLAGS.embedding_size, FLAGS.rnn_size,
                           FLAGS.num_rnn_layers)
             global_step = tf.Variable(0, name="globle_step", trainable=False)
             tvars = tf.trainable_variables()
-            grads, _ = tf.clip_by_global_norm(tf.gradients(lstm.loss, tvars),
-                                              FLAGS.max_grad_norm)
+            grads, _ = tf.clip_by_global_norm(tf.gradients(lstm.loss, tvars), FLAGS.max_grad_norm)
             saver = tf.train.Saver()
             sess.run(tf.global_variables_initializer())
 
@@ -111,13 +112,15 @@ with tf.Graph().as_default():
                                                                train_labels, train_questionId, FLAGS.batch_size):
                 tqs.append(ori_train), tta.append(cand_train), tfa.append(neg_train)
             for i in range(3):
-                train_op = tf.train.GradientDescentOptimizer(learningRate).apply_gradients(zip(grads, tvars),
-                                                                                           global_step=global_step)
+                optimizer = tf.train.GradientDescentOptimizer(learningRate)
+                optimizer.apply_gradients(zip(grads, tvars))
+                train_op = optimizer.apply_gradients(zip(grads, tvars), global_step=global_step)
                 for epoch in range(FLAGS.epochs):
                     for ori_train, cand_train, neg_train in zip(tqs, tta, tfa):
                         run_step(sess, ori_train, cand_train, neg_train, lstm)
                     valid_model(sess, lstm, valid_questions, valid_answers, FLAGS.valid_file, FLAGS.result_file)
                     saver.save(sess, saveFile + str(i*FLAGS.epochs+epoch) + '.model')
                 learningRate /= 2
-            #saver.restore(sess,saveFile+"20.model")
+            # saver.restore(sess,saveFile+"23.model")
+            # valid_model(sess, lstm, valid_questions, valid_answers, FLAGS.valid_file, FLAGS.result_file)
             valid_model(sess, lstm, test_questions, test_answers, FLAGS.test_file, FLAGS.result_file,False)
