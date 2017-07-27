@@ -75,7 +75,7 @@ def loadData(filename, word2idx, maxLen, training = False):
     with codecs.open(filename, mode="r", encoding="utf-8") as rf:
         try:
             for line in rf.readlines():
-                arr = line.strip().split("\t")
+                arr = line.split("\t")
                 if question != arr[0]:
                     question = arr[0]
                     questionId += 1
@@ -84,11 +84,9 @@ def loadData(filename, word2idx, maxLen, training = False):
                 if training:
                     label = int(arr[2])
                     labels.append(label)
-
                 ori_quests.append(ori_quest)
                 cand_quests.append(cand_quest)
                 questionIds.append(questionId)
-
         except Exception as e:
             logging.error("load error,", e)
         finally:
