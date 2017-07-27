@@ -18,8 +18,8 @@ tf.flags.DEFINE_string("embedding_file", "word2vec\zhwiki_2017_03.sg_50d.word2ve
 tf.flags.DEFINE_integer("embedding_size", 50, "embedding size")
 tf.flags.DEFINE_float("dropout", 1, "the proportion of dropout")
 learningRate = 0.5
-tf.flags.DEFINE_integer("batch_size", 20, "batch size of each batch")
-tf.flags.DEFINE_integer("epochs", 10, "epochs")
+tf.flags.DEFINE_integer("batch_size", 10, "batch size of each batch")
+tf.flags.DEFINE_integer("epochs", 20, "epochs")
 tf.flags.DEFINE_integer("rnn_size", 200, "rnn size")
 tf.flags.DEFINE_integer("num_rnn_layers", 1, "embedding size")
 tf.flags.DEFINE_integer("num_unroll_steps", 100, "句子中的最大词汇数目")
