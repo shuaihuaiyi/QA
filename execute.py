@@ -13,7 +13,7 @@ tf.flags.DEFINE_string("train_file", "data/training.data", "train corpus file")
 tf.flags.DEFINE_string("test_file", "data/testing.data", "test corpus file")
 tf.flags.DEFINE_string("valid_file", "data/develop.data", "test corpus file")
 tf.flags.DEFINE_string("result_file", "predictRst.score", "result file")
-saveFile = "model/savedModel"
+saveFile = "savedModel"
 tf.flags.DEFINE_string("embedding_file", "word2vec\zhwiki_2017_03.sg_50d.word2vec", "embedding file")
 tf.flags.DEFINE_integer("embedding_size", 50, "embedding size")
 tf.flags.DEFINE_float("dropout", 1, "the proportion of dropout")
@@ -119,7 +119,7 @@ with tf.Graph().as_default():
                     for ori_train, cand_train, neg_train in zip(tqs, tta, tfa):
                         run_step(sess, ori_train, cand_train, neg_train, lstm)
                     valid_model(sess, lstm, valid_questions, valid_answers, FLAGS.valid_file, FLAGS.result_file)
-                    saver.save(sess, saveFile + str(i*FLAGS.epochs+epoch) + '.model')
+                    saver.save(sess, str(i*FLAGS.epochs+epoch)+'model/'+saveFile)
                 learningRate /= 2
             # saver.restore(sess,saveFile+"23.model")
             # valid_model(sess, lstm, valid_questions, valid_answers, FLAGS.valid_file, FLAGS.result_file)
