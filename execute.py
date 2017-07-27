@@ -20,14 +20,13 @@ tf.flags.DEFINE_integer("embedding_size", 50, "embedding size")
 tf.flags.DEFINE_float("dropout", 1, "the proportion of dropout")
 tf.flags.DEFINE_float("lr", 0.1, "learning rate")
 tf.flags.DEFINE_integer("batch_size", 20, "batch size of each batch")
-tf.flags.DEFINE_integer("epochs", 500, "epochs")
+tf.flags.DEFINE_integer("epochs", 30, "epochs")
 tf.flags.DEFINE_integer("rnn_size", 100, "rnn size")
 tf.flags.DEFINE_integer("num_rnn_layers", 1, "embedding size")
 tf.flags.DEFINE_integer("num_unroll_steps", 100, "句子中的最大词汇数目")
 tf.flags.DEFINE_integer("max_grad_norm", 5, "embedding size")
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
-tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
 tf.flags.DEFINE_float("gpu_options", 0.75, "use memory rate")
 
 FLAGS = tf.flags.FLAGS
@@ -59,7 +58,7 @@ valid_questions, valid_answers, valid_labels, valid_questionId = loadData(FLAGS.
 
 
 def run_step(sess, ori_batch, cand_batch, neg_batch, lstm, dropout=1.):
-    start_time = time.time()
+    # start_time = time.time()
     feed_dict = {
         lstm.ori_input_quests: ori_batch,
         lstm.cand_input_quests: cand_batch,
@@ -69,17 +68,17 @@ def run_step(sess, ori_batch, cand_batch, neg_batch, lstm, dropout=1.):
 
     _, step, ori_cand_score, ori_neg_score, cur_loss, cur_acc = sess.run(
         [train_op, global_step, lstm.ori_cand, lstm.ori_neg, lstm.loss, lstm.acc], feed_dict)
-    time_str = datetime.datetime.now().isoformat()
-    right, wrong, score = [0.0] * 3
-    for i in range(0, len(ori_batch)):
-        if ori_cand_score[i] > 0.55 and ori_neg_score[i] < 0.4:
-            right += 1.0
-        else:
-            wrong += 1.0
-        score += ori_cand_score[i] - ori_neg_score[i]
-    time_elapsed = time.time() - start_time
-    logger.info("%s: step %s, loss %s, acc %s, score %s, wrong %s, %6.7f secs/batch" % (
-        time_str, step, cur_loss, cur_acc, score, wrong, time_elapsed))
+    # time_str = datetime.datetime.now().isoformat()
+    # right, wrong, score = [0.0] * 3
+    # for i in range(0, len(ori_batch)):
+    #     if ori_cand_score[i] > 0.55 and ori_neg_score[i] < 0.4:
+    #         right += 1.0
+    #     else:
+    #         wrong += 1.0
+    #     score += ori_cand_score[i] - ori_neg_score[i]
+    # time_elapsed = time.time() - start_time
+    # logger.info("%s: step %s, loss %s, acc %s, score %s, wrong %s, %6.7f secs/batch" % (
+    #     time_str, step, cur_loss, cur_acc, score, wrong, time_elapsed))
 
     return cur_loss, ori_cand_score
 
@@ -112,7 +111,6 @@ with tf.Graph().as_default():
     with tf.device("/gpu:0"):
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_options)
         session_conf = tf.ConfigProto(allow_soft_placement=FLAGS.allow_soft_placement,
-                                      log_device_placement=FLAGS.log_device_placement,
                                       gpu_options=gpu_options)
         with tf.Session(config=session_conf).as_default() as sess:
             lstm = LstmQa(FLAGS.batch_size, FLAGS.num_unroll_steps, embedding, FLAGS.embedding_size, FLAGS.rnn_size,

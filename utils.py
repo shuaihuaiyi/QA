@@ -1,18 +1,6 @@
 import tensorflow as tf
 
 
-# # ----------------------------- cal attention -------------------------------
-# # input_q, input_a (batch_size, rnn_size, seq_len)
-# def cal_attention(input_q, input_a, U):
-#     batch_size = int(input_q.get_shape()[0])
-#     U = tf.tile(tf.expand_dims(U, 0), [batch_size, 1, 1])
-#     G = tf.matmul(tf.matmul(input_q, U, True), input_a)
-#     delta_q = tf.nn.softmax(tf.reduce_max(G, 1), 1)
-#     delta_a = tf.nn.softmax(tf.reduce_max(G, 2), 1)
-#
-#     return delta_q, delta_a
-
-
 def feature2cos_sim(feat_q, feat_a):
     norm_q = tf.sqrt(tf.reduce_sum(tf.multiply(feat_q, feat_q), 1))
     norm_a = tf.sqrt(tf.reduce_sum(tf.multiply(feat_a, feat_a), 1))
