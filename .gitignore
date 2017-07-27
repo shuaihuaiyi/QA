@@ -143,4 +143,4 @@ ENV/
 # User defined files
 *.score
 word2vec/zhwiki_2017_03.sg_50d.word2vec
-*.model
+/model/
