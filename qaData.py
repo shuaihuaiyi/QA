@@ -1,112 +1,105 @@
-# coding=utf-8
-
 import codecs
 import logging
 import re
 from collections import defaultdict
-
 import jieba
 import numpy as np
 
-# define a logger
-logging.basicConfig(format="%(message)s", level=logging.INFO)
 
-
-def loadEmbedding(filename, embedding_size):
+def loadEmbedding(filename, embeddingSize):
     """
-    load embedding
+    加载词向量文件
+
+    :param filename: 文件名
+    :param embeddingSize: 文件维度
+    :return: embeddings列表和它对应的索引
     """
     embeddings = []
     word2idx = defaultdict(list)
-    idx2word = defaultdict(list)
-    idx = 0
-    with codecs.open(filename, mode="r", encoding="utf-8") as rf:
-        try:
-            for line in rf.readlines():
-                idx += 1
-                arr = line.split(" ")
-                if len(arr) != (embedding_size + 2):
-                    logging.error("embedding error, index is:%s" % idx)
-                    continue
-
-                embedding = [float(val) for val in arr[1: -1]]
-                word2idx[arr[0]] = len(word2idx)
-                idx2word[len(word2idx)] = arr[0]
-                embeddings.append(embedding)
-
-        except Exception as e:
-            logging.error("load embedding Exception,", e)
-        finally:
-            rf.close()
-
-    logging.info("load embedding finish!")
-    return embeddings, word2idx, idx2word
+    with open(filename, mode="r", encoding="utf-8") as rf:
+        for line in rf:
+            arr = line.split(" ")
+            embedding = [float(val) for val in arr[1: -1]]
+            word2idx[arr[0]] = len(word2idx)
+            embeddings.append(embedding)
+    return embeddings, word2idx
 
 
-def sentenceToIndex(sent, word2idx, sequence_len):
+def sentenceToIndex(sentence, word2idx, maxLen):
     """
-    convert sentence to index array
+    将句子分词，并转换成embeddings列表的索引值
+
+    :param sentence: 句子
+    :param word2idx: 词语的索引
+    :param maxLen: 句子的最大长度
+    :return: 句子的词向量索引表示
     """
-    unknown_id = word2idx.get("UNKNOWN", 0)
-    num_id = word2idx.get("NUM", len(word2idx))
-    sent2idx = [unknown_id] * sequence_len
+    unknown = word2idx.get("UNKNOWN", 0)
+    num = word2idx.get("NUM", len(word2idx))
+    index = [unknown] * maxLen
     i = 0
-    for word in jieba.cut(sent):
+    for word in jieba.cut(sentence):
         if (word in word2idx):
-            sent2idx[i] = word2idx[word]
+            index[i] = word2idx[word]
         else:
             if re.match("\d+", word):
-                sent2idx[i] = num_id
+                index[i] = num
             else:
-                sent2idx[i] = unknown_id
-        if i >= sequence_len - 1:
+                index[i] = unknown
+        if i >= maxLen - 1:
             break
         i += 1
-    return sent2idx
+    return index
 
 
 def loadData(filename, word2idx, maxLen, training=False):
     """
-    load data
+    加载训练文件或者测试文件
+
+    :param filename: 文件名
+    :param word2idx: 词向量索引
+    :param maxLen: 句子的最大长度
+    :param training: 是否作为训练文件读取
+    :return: 问题，答案，标签和问题ID
     """
-    ori_quests, cand_quests, labels, questionIds = [], [], [], []
     question = ""
     questionId = 0
-    with codecs.open(filename, mode="r", encoding="utf-8") as rf:
-        try:
-            for line in rf.readlines():
-                arr = line.split("\t")
-                if question != arr[0]:
-                    question = arr[0]
-                    questionId += 1
-                ori_quest = sentenceToIndex(arr[0].strip(), word2idx, maxLen)
-                cand_quest = sentenceToIndex(arr[1].strip(), word2idx, maxLen)
-                if training:
-                    label = int(arr[2])
-                    labels.append(label)
-                ori_quests.append(ori_quest)
-                cand_quests.append(cand_quest)
-                questionIds.append(questionId)
-        except Exception as e:
-            logging.error("load error,", e)
-        finally:
-            rf.close()
-    logging.info("load data finish!")
-    return ori_quests, cand_quests, labels, questionIds
+    questions, answers, labels, questionIds = [], [], [], []
+    with open(filename, mode="r", encoding="utf-8") as rf:
+        for line in rf.readlines():
+            arr = line.split("\t")
+            if question != arr[0]:
+                question = arr[0]
+                questionId += 1
+            questionIdx = sentenceToIndex(arr[0].strip(), word2idx, maxLen)
+            answerIdx = sentenceToIndex(arr[1].strip(), word2idx, maxLen)
+            if training:
+                label = int(arr[2])
+                labels.append(label)
+            questions.append(questionIdx)
+            answers.append(answerIdx)
+            questionIds.append(questionId)
+    return questions, answers, labels, questionIds
 
 
-def batchIter(questions, answers, labels, questionIds, batch_size):
+def trainingBatchIter(questions, answers, labels, questionIds, batchSize):
     """
-    iterate the data
+    逐个获取每一批训练数据的迭代器，会区分每个问题的正确和错误答案，拼接为（q，a+，a-）形式
+
+    :param questions: 问题列表
+    :param answers: 答案列表
+    :param labels: 标签列表
+    :param questionIds: 问题ID列表
+    :param batchSize: 每个batch的大小
     """
     trueAnswer = ""
-    data_len = questionIds[-1] + 1
-    batch_num = int(data_len / batch_size) + 1
+    dataLen = questionIds[-1] + 1
+    batchNum = int(dataLen / batchSize) + 1
     line = 0
-    for batch in range(batch_num):
+    for batch in range(batchNum):
         # 对于每一批问题
         resultQuestions, trueAnswers, falseAnswers = [], [], []
-        for questionId in range(batch * batch_size, min((batch + 1) * batch_size, data_len)):
+        for questionId in range(batch * batchSize, min((batch + 1) * batchSize, dataLen)):
             # 对于每一个问题
             trueCount = 0
             while questionIds[line] == questionId:
@@ -122,12 +115,19 @@ def batchIter(questions, answers, labels, questionIds, batch_size):
         yield np.array(resultQuestions), np.array(trueAnswers), np.array(falseAnswers)
 
 
-def valid_iter(questions, answers, batch_size):
+def testingBatchIter(questions, answers, batchSize):
+    """
+    逐个获取每一批测试数据的迭代器
+
+    :param questions: 问题列表
+    :param answers: 答案列表
+    :param batchSize: 每个batch的大小
+    """
     lines = len(questions)
-    data_len = batch_size * 20
-    batch_num = int(lines / data_len) + 1
+    dataLen = batchSize * 20
+    batchNum = int(lines / dataLen) + 1
     questions, answers = np.array(questions), np.array(answers)
-    for batch in range(batch_num):
-        startIndex = batch * data_len
-        endIndex = min(batch * data_len + data_len, lines)
+    for batch in range(batchNum):
+        startIndex = batch * dataLen
+        endIndex = min(batch * dataLen + dataLen, lines)
         yield questions[startIndex:endIndex], answers[startIndex:endIndex]

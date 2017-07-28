@@ -21,8 +21,8 @@ def train():
     for i in range(len(qIdDevelop)):
         qIdDevelop[i] += trainQuestionCounts
     tqs, tta, tfa = [], [], []
-    for question, trueAnswer, falseAnswer in qaData.batchIter(qTrain + qDevelop, aTrain + aDevelop,
-                                                              lTrain + lDevelop, qIdTrain + qIdDevelop, batchSize):
+    for question, trueAnswer, falseAnswer in qaData.trainingBatchIter(qTrain + qDevelop, aTrain + aDevelop,
+                                                                      lTrain + lDevelop, qIdTrain + qIdDevelop, batchSize):
         tqs.append(question), tta.append(trueAnswer), tfa.append(falseAnswer)
     # 开始训练
     sess.run(tf.global_variables_initializer())
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     # 定义参数
     trainingFile = "data/training.data"
     developFile = "data/develop.data"
-    testFile = "data/testing.data"
+    testingFile = "data/testing.data"
     resultFile = "predictRst.score"
     saveFile = "newModel/savedModel"
     trainedModel = "trainedModel/savedModel"
@@ -75,8 +75,8 @@ if __name__ == '__main__':
     gpuDevice = "/gpu:0"  # GPU设备名
 
     # 读取测试数据
-    embedding, word2idx, idx2word = qaData.loadEmbedding(embeddingFile, embeddingSize)
-    qTest, aTest, _, qIdTest = qaData.loadData(testFile, word2idx, unrollSteps)
+    embedding, word2idx = qaData.loadEmbedding(embeddingFile, embeddingSize)
+    qTest, aTest, _, qIdTest = qaData.loadData(testingFile, word2idx, unrollSteps)
 
     # 配置TensorFlow
     with tf.Graph().as_default(), tf.device(gpuDevice):
@@ -113,7 +113,7 @@ if __name__ == '__main__':
                 train()
             # 进行测试，输出结果
             with open(resultFile, 'w') as file:
-                for question, answer in qaData.valid_iter(qTest, aTest, batchSize):
+                for question, answer in qaData.testingBatchIter(qTest, aTest, batchSize):
                     feed_dict = {
                         lstm.test_input_q: question,
                         lstm.test_input_a: answer,
