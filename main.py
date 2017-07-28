@@ -1,11 +1,7 @@
 import os
-
 import time
-
-import qaData
-import taevaluation
 import tensorflow as tf
-
+import qaData
 from qaLSTM import QaLstm
 
 
@@ -45,7 +41,7 @@ def train():
                 }
                 _, step, _, _, loss, acc = \
                     sess.run([trainOp, globalStep, lstm.ori_cand, lstm.ori_neg, lstm.loss, lstm.acc], feed_dict)
-                timesUsed = time.time() - startTime
+                timeUsed = time.time() - startTime
                 print("step:", step, "loss:", loss, "acc:", acc, "time:", timeUsed)
             saver.save(sess, saveFile)
         learningRate *= lrDownRate
@@ -56,6 +52,7 @@ if __name__ == '__main__':
     trainingFile = "data/training.data"
     developFile = "data/develop.data"
     testFile = "data/testing.data"
+    resultFile = "predictRst.score"
     saveFile = "newModel/savedModel"
     trainedModel = "trainedModel/savedModel"
     embeddingFile = "word2vec/zhwiki_2017_03.sg_50d.word2vec"
@@ -95,7 +92,7 @@ if __name__ == '__main__':
 
             # 加载模型或训练模型
             if os.path.exists(trainedModel + '.index'):
-                while (True):
+                while True:
                     choice = input("找到已经训练好的模型，是否载入（y/n）")
                     if choice.strip().lower() == 'y':
                         restore()
@@ -115,4 +112,13 @@ if __name__ == '__main__':
             else:
                 train()
             # 进行测试，输出结果
-            pass
+            with open(resultFile, 'w') as file:
+                for question, answer in qaData.valid_iter(qTest, aTest, batchSize):
+                    feed_dict = {
+                        lstm.test_input_q: question,
+                        lstm.test_input_a: answer,
+                        lstm.keep_prob: dropout
+                    }
+                    _, scores = sess.run([globalStep, lstm.test_q_a], feed_dict)
+                    for score in scores:
+                        file.write("%.9f" % score + '\n')

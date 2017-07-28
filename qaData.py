@@ -48,14 +48,14 @@ def sentenceToIndex(sent, word2idx, sequence_len):
     convert sentence to index array
     """
     unknown_id = word2idx.get("UNKNOWN", 0)
-    num_id = word2idx.get("NUM",len(word2idx))
+    num_id = word2idx.get("NUM", len(word2idx))
     sent2idx = [unknown_id] * sequence_len
     i = 0
     for word in jieba.cut(sent):
-        if(word in word2idx):
+        if (word in word2idx):
             sent2idx[i] = word2idx[word]
         else:
-            if re.match("\d+",word):
+            if re.match("\d+", word):
                 sent2idx[i] = num_id
             else:
                 sent2idx[i] = unknown_id
@@ -65,7 +65,7 @@ def sentenceToIndex(sent, word2idx, sequence_len):
     return sent2idx
 
 
-def loadData(filename, word2idx, maxLen, training = False):
+def loadData(filename, word2idx, maxLen, training=False):
     """
     load data
     """
