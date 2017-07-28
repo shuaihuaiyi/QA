@@ -79,8 +79,8 @@ def loadData(filename, word2idx, maxLen, training = False):
                 if question != arr[0]:
                     question = arr[0]
                     questionId += 1
-                ori_quest = sent_to_idx(arr[0], word2idx, maxLen)
-                cand_quest = sent_to_idx(arr[1], word2idx, maxLen)
+                ori_quest = sent_to_idx(arr[0].strip(), word2idx, maxLen)
+                cand_quest = sent_to_idx(arr[1].strip(), word2idx, maxLen)
                 if training:
                     label = int(arr[2])
                     labels.append(label)
