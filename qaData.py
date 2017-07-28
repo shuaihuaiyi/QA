@@ -12,7 +12,7 @@ import numpy as np
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 
 
-def load_embedding(filename, embedding_size):
+def loadEmbedding(filename, embedding_size):
     """
     load embedding
     """
@@ -43,7 +43,7 @@ def load_embedding(filename, embedding_size):
     return embeddings, word2idx, idx2word
 
 
-def sent_to_idx(sent, word2idx, sequence_len):
+def sentenceToIndex(sent, word2idx, sequence_len):
     """
     convert sentence to index array
     """
@@ -79,8 +79,8 @@ def loadData(filename, word2idx, maxLen, training = False):
                 if question != arr[0]:
                     question = arr[0]
                     questionId += 1
-                ori_quest = sent_to_idx(arr[0].strip(), word2idx, maxLen)
-                cand_quest = sent_to_idx(arr[1].strip(), word2idx, maxLen)
+                ori_quest = sentenceToIndex(arr[0].strip(), word2idx, maxLen)
+                cand_quest = sentenceToIndex(arr[1].strip(), word2idx, maxLen)
                 if training:
                     label = int(arr[2])
                     labels.append(label)
@@ -95,12 +95,12 @@ def loadData(filename, word2idx, maxLen, training = False):
     return ori_quests, cand_quests, labels, questionIds
 
 
-def batch_iter(questions, answers, labels, questionIds, batch_size):
+def batchIter(questions, answers, labels, questionIds, batch_size):
     """
     iterate the data
     """
     trueAnswer = ""
-    data_len = questionIds[-1]
+    data_len = questionIds[-1] + 1
     batch_num = int(data_len / batch_size) + 1
     line = 0
     for batch in range(batch_num):

@@ -1,11 +1,10 @@
-# coding:utf-8
 import tensorflow as tf
 from bilstm import biLSTM
 from utils import feature2cos_sim, max_pooling, cal_loss_and_acc
 
 
-class LstmQa(object):
-    def __init__(self, batch_size, num_unroll_steps, embeddings, embedding_size, rnn_size, num_rnn_layers):
+class QaLstm(object):
+    def __init__(self, batch_size, num_unroll_steps, embeddings, embedding_size, rnn_size):
         # define input variable
         # if label_weight is None:
         #     label_weight = []
@@ -15,7 +14,7 @@ class LstmQa(object):
         # self.adjust_weight = adjust_weight
         # self.label_weight = label_weight
         self.rnn_size = rnn_size
-        self.num_rnn_layers = num_rnn_layers
+        # self.num_rnn_layers = num_rnn_layers
         self.num_unroll_steps = num_unroll_steps
         # self.max_grad_norm = max_grad_norm
         # self.l2_reg_lambda = l2_reg_lambda
@@ -63,8 +62,7 @@ class LstmQa(object):
         self.ori_neg = feature2cos_sim(ori_q_feat, neg_q_feat)
         self.loss, self.acc = cal_loss_and_acc(self.ori_cand, self.ori_neg)
 
-
         self.test_q_a = feature2cos_sim(test_q_out, test_a_out)
 
-    # def assign_new_lr(self, session, lr_value):
-    #     session.run(self._lr_update, feed_dict={self.new_lr: lr_value})
+        # def assign_new_lr(self, session, lr_value):
+        #     session.run(self._lr_update, feed_dict={self.new_lr: lr_value})
