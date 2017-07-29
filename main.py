@@ -9,6 +9,7 @@ from qaLSTMNet import QaLSTMNet
 
 def restore():
     try:
+        print("正在加载模型，大约需要一分钟...")
         saver.restore(sess, trainedModel)
     except Exception as e:
         print(e)
@@ -17,10 +18,12 @@ def restore():
 
 
 def train():
+    print("重新训练，请保证计算机拥有至少8G空闲内存与2G空闲显存")
     # 准备训练数据
+    print("正在准备训练数据，大约需要五分钟...")
     qTrain, aTrain, lTrain, qIdTrain = qaData.loadData(trainingFile, word2idx, unrollSteps, True)
     qDevelop, aDevelop, lDevelop, qIdDevelop = qaData.loadData(developFile, word2idx, unrollSteps, True)
-    trainQuestionCounts = qIdTrain[-1] + 1
+    trainQuestionCounts = qIdTrain[-1]
     for i in range(len(qIdDevelop)):
         qIdDevelop[i] += trainQuestionCounts
     tqs, tta, tfa = [], [], []
@@ -28,7 +31,9 @@ def train():
                                                                       lTrain + lDevelop, qIdTrain + qIdDevelop,
                                                                       batchSize):
         tqs.append(question), tta.append(trueAnswer), tfa.append(falseAnswer)
+    print("加载完成！")
     # 开始训练
+    print("开始训练，全部训练过程大约需要12小时")
     sess.run(tf.global_variables_initializer())
     lr = learningRate  # 引入局部变量，防止shadow name
     for i in range(lrDownCount):
@@ -81,20 +86,23 @@ if __name__ == '__main__':
     gpuDevice = "/gpu:0"  # GPU设备名
 
     # 读取测试数据
+    print("正在载入测试数据，大约需要一分钟...")
     embedding, word2idx = qaData.loadEmbedding(embeddingFile)
     qTest, aTest, _, qIdTest = qaData.loadData(testingFile, word2idx, unrollSteps)
-
+    print("测试数据加载完成")
     # 配置TensorFlow
     with tf.Graph().as_default(), tf.device(gpuDevice):
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpuMemUsage)
         session_conf = tf.ConfigProto(allow_soft_placement=allow_soft_placement, gpu_options=gpu_options)
         with tf.Session(config=session_conf).as_default() as sess:
             # 加载LSTM网络
-            globalStep = tf.Variable(0, name="globalStep", trainable=False)
+            print("正在加载LSTM网络，大约需要三分钟...")
+            globalStep = tf.Variable(0, name="globle_step", trainable=False)
             lstm = QaLSTMNet(batchSize, unrollSteps, embedding, embeddingSize, rnnSize, margin)
             tvars = tf.trainable_variables()
             grads, _ = tf.clip_by_global_norm(tf.gradients(lstm.loss, tvars), max_grad_norm)
             saver = tf.train.Saver()
+            print("加载完成！")
 
             # 加载模型或训练模型
             if os.path.exists(trainedModel + '.index'):
@@ -104,20 +112,15 @@ if __name__ == '__main__':
                         restore()
                         break
                     elif choice.strip().lower() == 'n':
-                        choice = input("您真的确定吗？重新训练会消耗大量时间与硬件资源（yes/no）")
-                        if choice.strip().lower() == 'yes':
-                            train()
-                            break
-                        elif choice.strip().lower() == 'no':
-                            restore()
-                            break
-                        else:
-                            print("无效的输入！\n")
+                        train()
+                        break
                     else:
                         print("无效的输入！\n")
             else:
                 train()
+
             # 进行测试，输出结果
+            print("正在进行测试，大约需要三分钟...")
             with open(resultFile, 'w') as file:
                 for question, answer in qaData.testingBatchIter(qTest, aTest, batchSize):
                     feed_dict = {
@@ -128,3 +131,4 @@ if __name__ == '__main__':
                     _, scores = sess.run([globalStep, lstm.result], feed_dict)
                     for score in scores:
                         file.write("%.9f" % score + '\n')
+    print("所有步骤完成！程序结束")

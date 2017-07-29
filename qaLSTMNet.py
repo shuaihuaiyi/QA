@@ -23,7 +23,7 @@ class QaLSTMNet(object):
 
         # 设置word embedding层
         with tf.device("/cpu:0"), tf.name_scope("embedding_layer"):
-            tfEmbedding = tf.Variable(tf.to_float(self.embeddings), trainable=True)
+            tfEmbedding = tf.Variable(tf.to_float(self.embeddings), trainable=True, name="W")
             questions = tf.nn.embedding_lookup(tfEmbedding, self.inputQuestions)
             trueAnswers = tf.nn.embedding_lookup(tfEmbedding, self.inputTrueAnswers)
             falseAnswers = tf.nn.embedding_lookup(tfEmbedding, self.inputFalseAnswers)

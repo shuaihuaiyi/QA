@@ -91,7 +91,7 @@ def trainingBatchIter(questions, answers, labels, questionIds, batchSize):
     :param batchSize: 每个batch的大小
     """
     trueAnswer = ""
-    dataLen = questionIds[-1] + 1
+    dataLen = questionIds[-1]
     batchNum = int(dataLen / batchSize) + 1
     line = 0
     for batch in range(batchNum):
