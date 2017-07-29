@@ -4,13 +4,14 @@ import time
 import tensorflow as tf
 
 import qaData
-from qaLSTM import QaLstm
+from qaLSTMNet import QaLSTMNet
 
 
 def restore():
     try:
         saver.restore(sess, trainedModel)
     except Exception as e:
+        print(e)
         print("加载模型失败，重新开始训练")
         train()
 
@@ -29,25 +30,26 @@ def train():
         tqs.append(question), tta.append(trueAnswer), tfa.append(falseAnswer)
     # 开始训练
     sess.run(tf.global_variables_initializer())
+    lr = learningRate  # 引入局部变量，防止shadow name
     for i in range(lrDownCount):
-        optimizer = tf.train.GradientDescentOptimizer(learningRate)
+        optimizer = tf.train.GradientDescentOptimizer(lr)
         optimizer.apply_gradients(zip(grads, tvars))
         trainOp = optimizer.apply_gradients(zip(grads, tvars), global_step=globalStep)
         for epoch in range(epochs):
             for question, trueAnswer, falseAnswer in zip(tqs, tta, tfa):
                 startTime = time.time()
                 feed_dict = {
-                    lstm.ori_input_quests: question,
-                    lstm.cand_input_quests: trueAnswer,
-                    lstm.neg_input_quests: falseAnswer,
+                    lstm.inputQuestions: question,
+                    lstm.inputTrueAnswers: trueAnswer,
+                    lstm.inputFalseAnswers: falseAnswer,
                     lstm.keep_prob: dropout
                 }
-                _, step, _, _, loss, acc = \
-                    sess.run([trainOp, globalStep, lstm.ori_cand, lstm.ori_neg, lstm.loss, lstm.acc], feed_dict)
+                _, step, _, _, loss = \
+                    sess.run([trainOp, globalStep, lstm.trueCosSim, lstm.falseCosSim, lstm.loss], feed_dict)
                 timeUsed = time.time() - startTime
-                print("step:", step, "loss:", loss, "acc:", acc, "time:", timeUsed)
+                print("step:", step, "loss:", loss, "time:", timeUsed)
             saver.save(sess, saveFile)
-        learningRate *= lrDownRate
+        lr *= lrDownRate
 
 
 if __name__ == '__main__':
@@ -69,16 +71,17 @@ if __name__ == '__main__':
     batchSize = 20  # 每一批次处理的<b>问题</b>个数
 
     rnnSize = 100  # LSTM cell中隐藏层神经元的个数
+    margin = 0.1  # M is constant margin
 
     unrollSteps = 100  # 句子中的最大词汇数目
-    max_grad_norm = 5
+    max_grad_norm = 5  # 用于控制梯度膨胀，如果梯度向量的L2模超过max_grad_norm，则等比例缩小
 
     allow_soft_placement = True  # Allow device soft device placement
-    gpuMemUsage = 0.8  # 显存最大使用
+    gpuMemUsage = 0.75  # 显存最大使用率
     gpuDevice = "/gpu:0"  # GPU设备名
 
     # 读取测试数据
-    embedding, word2idx = qaData.loadEmbedding(embeddingFile, embeddingSize)
+    embedding, word2idx = qaData.loadEmbedding(embeddingFile)
     qTest, aTest, _, qIdTest = qaData.loadData(testingFile, word2idx, unrollSteps)
 
     # 配置TensorFlow
@@ -88,7 +91,7 @@ if __name__ == '__main__':
         with tf.Session(config=session_conf).as_default() as sess:
             # 加载LSTM网络
             globalStep = tf.Variable(0, name="globalStep", trainable=False)
-            lstm = QaLstm(batchSize, unrollSteps, embedding, embeddingSize, rnnSize)
+            lstm = QaLSTMNet(batchSize, unrollSteps, embedding, embeddingSize, rnnSize, margin)
             tvars = tf.trainable_variables()
             grads, _ = tf.clip_by_global_norm(tf.gradients(lstm.loss, tvars), max_grad_norm)
             saver = tf.train.Saver()
@@ -118,10 +121,10 @@ if __name__ == '__main__':
             with open(resultFile, 'w') as file:
                 for question, answer in qaData.testingBatchIter(qTest, aTest, batchSize):
                     feed_dict = {
-                        lstm.test_input_q: question,
-                        lstm.test_input_a: answer,
+                        lstm.inputTestQuestions: question,
+                        lstm.inputTestAnswers: answer,
                         lstm.keep_prob: dropout
                     }
-                    _, scores = sess.run([globalStep, lstm.test_q_a], feed_dict)
+                    _, scores = sess.run([globalStep, lstm.result], feed_dict)
                     for score in scores:
                         file.write("%.9f" % score + '\n')

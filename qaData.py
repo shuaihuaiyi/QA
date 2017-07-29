@@ -5,12 +5,11 @@ import jieba
 import numpy as np
 
 
-def loadEmbedding(filename, embeddingSize):
+def loadEmbedding(filename):
     """
     加载词向量文件
 
     :param filename: 文件名
-    :param embeddingSize: 文件维度
     :return: embeddings列表和它对应的索引
     """
     embeddings = []
@@ -38,7 +37,7 @@ def sentenceToIndex(sentence, word2idx, maxLen):
     index = [unknown] * maxLen
     i = 0
     for word in jieba.cut(sentence):
-        if (word in word2idx):
+        if word in word2idx:
             index[i] = word2idx[word]
         else:
             if re.match("\d+", word):
@@ -103,7 +102,7 @@ def trainingBatchIter(questions, answers, labels, questionIds, batchSize):
             trueCount = 0
             while questionIds[line] == questionId:
                 # 对于某个问题中的某一行
-                if (labels[line] == 0):
+                if labels[line] == 0:
                     resultQuestions.append(questions[line])
                     falseAnswers.append(answers[line])
                 else:
