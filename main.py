@@ -1,6 +1,8 @@
 import os
 import time
+
 import tensorflow as tf
+
 import qaData
 from qaLSTM import QaLstm
 
@@ -22,7 +24,8 @@ def train():
         qIdDevelop[i] += trainQuestionCounts
     tqs, tta, tfa = [], [], []
     for question, trueAnswer, falseAnswer in qaData.trainingBatchIter(qTrain + qDevelop, aTrain + aDevelop,
-                                                                      lTrain + lDevelop, qIdTrain + qIdDevelop, batchSize):
+                                                                      lTrain + lDevelop, qIdTrain + qIdDevelop,
+                                                                      batchSize):
         tqs.append(question), tta.append(trueAnswer), tfa.append(falseAnswer)
     # 开始训练
     sess.run(tf.global_variables_initializer())

@@ -1,7 +1,6 @@
-import codecs
-import logging
 import re
 from collections import defaultdict
+
 import jieba
 import numpy as np
 
